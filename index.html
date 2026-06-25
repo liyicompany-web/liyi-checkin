@@ -8,71 +8,69 @@
 </head>
 <body style="padding: 20px; font-family: sans-serif; text-align: center;">
   <h2 id="welcome-msg">正在載入系統...</h2>
-  <div id="controls" style="display:none;">
+  
+  <div id="controls" style="display:none; margin-top: 30px;">
     <button onclick="handlePunch('上班')" style="font-size: 20px; padding: 15px 40px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px;">上班打卡</button><br>
     <button onclick="handlePunch('下班')" style="font-size: 20px; padding: 15px 40px; margin: 10px; background-color: #f44336; color: white; border: none; border-radius: 8px;">下班打卡</button>
   </div>
-  <p id="status-text" style="color: #666; margin-top: 20px;"></p>
+  
+  <p id="status-text" style="font-weight: bold; margin-top: 20px; font-size: 16px;"></p>
 
   <script>
-    const MY_LIFF_ID = "2010498585-88IzHp5i";
-    const GAS_API_URL = "https://docs.google.com/spreadsheets/d/1VcZ1G1r6chHgn9hsX0OXZNGWUw4rfuuKdOXNd98SPZk/edit"; // <--- 記得修改這裡！
+    // ▼▼▼ 1. 請填入你在 LINE Developers 申請的 LIFF ID ▼▼▼
+    const MY_LIFF_ID = "2010498585-88IzHp5i"; 
 
-    const stores = [
-      {name: "關西工廠", lat: 24.793893, lng: 121.189016},
-      {name: "大昌店", lat: 24.864896, lng: 121.222429},
-      {name: "桃園店", lat: 24.997048, lng: 121.306013},
-      {name: "中壢店", lat: 24.956362, lng: 121.223104},
-      {name: "中正店", lat: 24.869475, lng: 121.214192},
-      {name: "中豐店", lat: 24.869853, lng: 121.214045},
-      {name: "龍福店", lat: 24.864999, lng: 121.222814},
-      {name: "大溪店", lat: 24.897105, lng: 121.278713}
-    ];
+    // ▼▼▼ 2. 請貼上你剛剛在第一步拿到的全新 Google Apps Script URL ▼▼▼
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbygHNPtauU-l3f1JTFi9vucwliq--Y91kVkJwSawz41ERn9g1YN_LzRlRAriCjvWzWgOA/exec"; 
 
     let userName = "";
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    async function handlePunch(action) {
-      document.getElementById('status-text').innerText = "正在進行定位核對...";
-      
-      navigator.geolocation.getCurrentPosition(pos => {
-        let lat = pos.coords.latitude;
-        let lng = pos.coords.longitude;
-        
-        let isNear = stores.some(s => getDistance(lat, lng, s.lat, s.lng) <= 100);
-        
-        if (!isNear) {
-          alert("⚠️ 打卡失敗：您目前不在門市 100 公尺範圍內！");
-          document.getElementById('status-text').innerText = "定位失敗：距離門市過遠。";
-          return;
+    async function initLiff() {
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          const profile = await liff.getProfile();
+          userName = profile.displayName;
+          document.getElementById('welcome-msg').innerText = "哈囉，" + userName + "！";
+          document.getElementById('controls').style.display = "block";
         }
-
-        let finalUrl = `${GAS_API_URL}?name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&lat=${lat}&lng=${lng}`;
-        fetch(finalUrl).then(r => r.json()).then(data => {
-          document.getElementById('status-text').innerText = data.message;
-          if(data.status === "success") setTimeout(() => liff.closeWindow(), 2000);
-        });
-      }, (err) => {
-        alert("定位失敗！請確認：\n1. 已開啟 GPS\n2. LINE 已允許位置存取\n錯誤碼: " + err.code);
-        document.getElementById('status-text').innerText = "請允許位置存取權限。";
-      }, { enableHighAccuracy: true, timeout: 10000 });
+      } catch (error) {
+        document.getElementById('status-text').innerText = "系統初始化失敗，請確保在 LINE 內部開啟。";
+      }
     }
 
-    liff.init({ liffId: MY_LIFF_ID }).then(() => {
-      if (!liff.isLoggedIn()) liff.login();
-      else liff.getProfile().then(p => {
-        userName = p.displayName;
-        document.getElementById('welcome-msg').innerText = "哈囉，" + userName + "！";
-        document.getElementById('controls').style.display = "block";
-      });
-    });
+    function handlePunch(action) {
+      document.getElementById('status-text').innerText = "正在定位並傳送資料...";
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          let lat = position.coords.latitude;
+          let lng = position.coords.longitude;
+          
+          // 透過網址將資料傳送給 Google 試算表
+          let finalUrl = `${GAS_API_URL}?name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&lat=${lat}&lng=${lng}`;
+          
+          fetch(finalUrl)
+            .then(response => response.json())
+            .then(data => {
+              if(data.status === "success") {
+                document.getElementById('status-text').innerText = data.message;
+                setTimeout(() => { liff.closeWindow(); }, 2000);
+              } else {
+                document.getElementById('status-text').innerText = "寫入失敗，請稍後再試。";
+              }
+            })
+            .catch(error => { document.getElementById('status-text').innerText = "網路連線異常"; });
+            
+        }, function(error) {
+          document.getElementById('status-text').innerText = "定位失敗，請確認手機 GPS 已開啟。";
+        });
+      }
+    }
+
+    window.onload = initLiff;
   </script>
 </body>
 </html>
