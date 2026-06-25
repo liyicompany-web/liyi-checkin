@@ -2,17 +2,34 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>階段整合測試</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>門店打卡系統</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
-<body style="padding: 20px; text-align: center;">
-  <h2 id="msg">請按下打卡按鈕測試</h2>
-  <button onclick="testPunch()" style="font-size: 20px; padding: 20px;">測試門市定位</button>
+<body style="padding: 20px; font-family: sans-serif; text-align: center;">
+  <h2 id="welcome-msg">載入中...</h2>
+  <div id="controls" style="display:none;">
+    <button onclick="handlePunch('上班')" style="font-size: 20px; padding: 15px 40px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px;">上班打卡</button><br>
+    <button onclick="handlePunch('下班')" style="font-size: 20px; padding: 15px 40px; margin: 10px; background-color: #f44336; color: white; border: none; border-radius: 8px;">下班打卡</button>
+  </div>
+  <p id="status-text" style="color: #666; margin-top: 20px;"></p>
 
   <script>
+    const MY_LIFF_ID = "2010498585-88IzHp5i";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbygHNPtauU-l3f1JTFi9vucwliq--Y91kVkJwSawz41ERn9g1YN_LzRlRAriCjvWzWgOA/exec"; 
+
     const stores = [
-      {name: "關西工廠", lat: 24.793893, lng: 121.189016} // 先測一間就好
+      {name: "關西工廠", lat: 24.793893, lng: 121.189016},
+      {name: "大昌店", lat: 24.864896, lng: 121.222429},
+      {name: "桃園店", lat: 24.997048, lng: 121.306013},
+      {name: "中壢店", lat: 24.956362, lng: 121.223104},
+      {name: "中正店", lat: 24.869475, lng: 121.214192},
+      {name: "中豐店", lat: 24.869853, lng: 121.214045},
+      {name: "龍福店", lat: 24.864999, lng: 121.222814},
+      {name: "大溪店", lat: 24.897105, lng: 121.278713}
     ];
+
+    let userName = "";
 
     function getDistance(lat1, lon1, lat2, lon2) {
       const R = 6371000;
@@ -22,17 +39,44 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function testPunch() {
-      document.getElementById('msg').innerText = "正在計算...";
+    async function handlePunch(action) {
+      document.getElementById('status-text').innerText = "定位與檢查中...";
+      
       navigator.geolocation.getCurrentPosition(pos => {
         let lat = pos.coords.latitude;
         let lng = pos.coords.longitude;
-        let dist = getDistance(lat, lng, stores[0].lat, stores[0].lng);
-        document.getElementById('msg').innerText = "緯度:" + lat.toFixed(4) + " 距離:" + Math.round(dist) + "公尺";
+        
+        let minDistance = Math.min(...stores.map(s => getDistance(lat, lng, s.lat, s.lng)));
+        
+        if (minDistance > 100) {
+          alert("打卡失敗：您距離最近門市約 " + Math.round(minDistance) + " 公尺，超過 100 公尺限制。");
+          document.getElementById('status-text').innerText = "不在門市範圍內";
+          return;
+        }
+
+        document.getElementById('status-text').innerText = "驗證通過，傳送中...";
+        let finalUrl = `${GAS_API_URL}?name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&lat=${lat}&lng=${lng}`;
+        
+        fetch(finalUrl).then(r => r.json()).then(data => {
+          document.getElementById('status-text').innerText = data.message;
+          if(data.status === "success") {
+            alert("打卡成功！");
+            liff.closeWindow();
+          }
+        });
       }, err => {
-        document.getElementById('msg').innerText = "錯誤: " + err.code;
-      }, { enableHighAccuracy: true });
+        alert("定位錯誤 (代碼 " + err.code + ")，請確認 GPS 已開啟。");
+        document.getElementById('status-text').innerText = "定位失敗";
+      }, { enableHighAccuracy: true, timeout: 8000 });
     }
+
+    liff.init({ liffId: MY_LIFF_ID }).then(() => {
+      liff.getProfile().then(p => {
+        userName = p.displayName;
+        document.getElementById('welcome-msg').innerText = userName + " 您好";
+        document.getElementById('controls').style.display = "block";
+      });
+    });
   </script>
 </body>
 </html>
