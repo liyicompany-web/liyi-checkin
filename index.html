@@ -48,8 +48,8 @@
         
         let minDistance = Math.min(...stores.map(s => getDistance(lat, lng, s.lat, s.lng)));
         
-        if (minDistance > 50) {
-          alert("打卡失敗：您距離最近門市約 " + Math.round(minDistance) + " 公尺，超過 50 公尺限制。");
+        if (minDistance > 30) {
+          alert("打卡失敗：您距離最近門市約 " + Math.round(minDistance) + " 公尺，超過 30 公尺限制。");
           document.getElementById('status-text').innerText = "不在門市範圍內";
           return;
         }
