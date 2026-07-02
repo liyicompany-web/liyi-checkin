@@ -4,20 +4,15 @@
   <meta charset="UTF-8">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
-<body style="padding: 20px; font-family: sans-serif;">
-  <h3 id="status">正在識別身份...</h3>
-  <iframe id="resultFrame" style="width: 100%; border: none; min-height: 400px;"></iframe>
-
+<body>
+  <h3 id="status">正在轉跳至打卡紀錄查詢系統...</h3>
   <script>
-    const LIFF_ID = "2010498585-GYrE99ub";
-    // 請將下方的網址替換為你這個 GAS 專案正確的「網頁應用程式網址」
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
+    const GAS_URL = "你的網頁應用程式網址"; 
 
-    liff.init({ liffId: LIFF_ID }).then(() => {
+    liff.init({ liffId: "2010498585-GYrE99ub" }).then(() => {
         liff.getProfile().then(p => {
-            document.getElementById('status').innerHTML = "歡迎 " + p.displayName + "，查詢當月紀錄：";
-            // 透過 iframe 將名字傳給 GAS
-            document.getElementById('resultFrame').src = GAS_URL + "?name=" + encodeURIComponent(p.displayName);
+            // 直接跳轉，而不是使用 iframe
+            window.location.href = GAS_URL + "?name=" + encodeURIComponent(p.displayName);
         });
     });
   </script>
