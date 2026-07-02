@@ -5,26 +5,29 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body style="padding: 20px;">
-  <h3 id="status">正在自動識別身分...</h3>
+  <h3 id="status">識別中...</h3>
   <div id="list"></div>
 
   <script>
-    const LIFF_ID = "2010498585-GYrE99ub";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
 
-    liff.init({ liffId: LIFF_ID }).then(() => {
+    liff.init({ liffId: "2010498585-GYrE99ub" }).then(() => {
         liff.getProfile().then(p => {
-            document.getElementById('status').innerHTML = "歡迎 " + p.displayName + "，撈取當月紀錄中...";
-            fetch(GAS_URL + "?name=" + encodeURIComponent(p.displayName))
-                .then(res => res.json())
-                .then(data => {
-                    let html = "<ul>";
-                    if(data.length === 0) { html += "<li>本月無打卡紀錄</li>"; }
-                    data.forEach(r => { html += `<li>${r.time} - ${r.action}</li>`; });
-                    document.getElementById('list').innerHTML = html + "</ul>";
-                });
+            document.getElementById('status').innerHTML = "歡迎 " + p.displayName;
+            
+            // 使用 JSONP 方式請求
+            var script = document.createElement('script');
+            script.src = GAS_URL + "?name=" + encodeURIComponent(p.displayName) + "&callback=handleResponse";
+            document.body.appendChild(script);
         });
     });
+
+    function handleResponse(data) {
+        let html = "<ul>";
+        if(data.length === 0) { html += "<li>本月無打卡紀錄</li>"; }
+        data.forEach(r => { html += `<li>${r.time} - ${r.action}</li>`; });
+        document.getElementById('list').innerHTML = html + "</ul>";
+    }
   </script>
 </body>
 </html>
