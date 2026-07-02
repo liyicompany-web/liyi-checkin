@@ -2,18 +2,30 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>查詢打卡紀錄</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
-<body>
-  <h3 id="status">正在轉跳至打卡紀錄查詢系統...</h3>
+<body style="padding: 20px; font-family: sans-serif;">
+  <h3 id="status">正在驗證身份並導向查詢系統...</h3>
+
   <script>
-    const GAS_URL = "你的網頁應用程式網址"; 
+    // 請將下方的 URL 替換為你「剛剛重新部署後」獲得的那個全新網址
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
 
     liff.init({ liffId: "2010498585-GYrE99ub" }).then(() => {
-        liff.getProfile().then(p => {
-            // 直接跳轉，而不是使用 iframe
-            window.location.href = GAS_URL + "?name=" + encodeURIComponent(p.displayName);
-        });
+        if (!liff.isLoggedIn()) {
+            liff.login();
+        } else {
+            liff.getProfile().then(p => {
+                // 直接透過 window.location.href 進行跳轉，避開 iframe 的 403 權限問題
+                window.location.href = GAS_URL + "?name=" + encodeURIComponent(p.displayName);
+            }).catch(err => {
+                document.getElementById('status').innerText = "取得身份失敗: " + err;
+            });
+        }
+    }).catch(err => {
+        document.getElementById('status').innerText = "LIFF 初始化失敗: " + err;
     });
   </script>
 </body>
