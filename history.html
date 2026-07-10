@@ -2,7 +2,6 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>打卡查詢</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
@@ -11,7 +10,6 @@
 
   <script>
     const LIFF_ID = "2010498585-GYrE99ub"; 
-    // 確保這裡的網址是正確的 (結尾要有 /exec)
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
 
     async function initLiff() {
@@ -20,19 +18,23 @@
         liff.login();
       } else {
         const profile = await liff.getProfile();
-        // 這裡會跳出視窗告訴您抓到的名字，請確認是否為空
-        alert("目前抓到的名字: " + profile.displayName);
-        fetchData(profile.displayName);
+        const userName = profile.displayName; // 抓取 LINE 名稱
+        
+        // 確保名字有抓到，再執行查詢
+        if (userName) {
+            fetchData(userName);
+        } else {
+            document.getElementById('result').innerHTML = "錯誤：抓不到 LINE 名稱";
+        }
       }
     }
 
     async function fetchData(name) {
-      if (!name) {
-        document.getElementById('result').innerHTML = "錯誤：抓不到 LINE 名稱";
-        return;
-      }
+      // 這裡強制拼接完整的 URL
+      const fullUrl = GAS_URL + "?name=" + encodeURIComponent(name);
+      
       try {
-        const response = await fetch(GAS_URL + "?name=" + encodeURIComponent(name));
+        const response = await fetch(fullUrl);
         const data = await response.json();
         
         if (data.error) {
@@ -41,7 +43,7 @@
         }
 
         if (data.length === 0) {
-          document.getElementById('result').innerHTML = "查無紀錄: " + name;
+          document.getElementById('result').innerHTML = "查無此人紀錄: " + name;
           return;
         }
         
@@ -54,6 +56,7 @@
         document.getElementById('result').innerHTML = "連線失敗: " + err;
       }
     }
+    
     initLiff();
   </script>
 </body>
