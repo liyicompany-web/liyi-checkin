@@ -2,7 +2,15 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打卡查詢</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 15px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #f4f4f4; }
+  </style>
 </head>
 <body>
   <h3>個人打卡紀錄</h3>
@@ -18,42 +26,27 @@
         liff.login();
       } else {
         const profile = await liff.getProfile();
-        const userName = profile.displayName; // 抓取 LINE 名稱
-        
-        // 確保名字有抓到，再執行查詢
-        if (userName) {
-            fetchData(userName);
-        } else {
-            document.getElementById('result').innerHTML = "錯誤：抓不到 LINE 名稱";
-        }
+        fetchData(profile.displayName);
       }
     }
 
     async function fetchData(name) {
-      // 這裡強制拼接完整的 URL
-      const fullUrl = GAS_URL + "?name=" + encodeURIComponent(name);
-      
       try {
-        const response = await fetch(fullUrl);
+        const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`);
         const data = await response.json();
         
-        if (data.error) {
-           document.getElementById('result').innerHTML = "後端錯誤: " + data.error;
-           return;
-        }
-
         if (data.length === 0) {
-          document.getElementById('result').innerHTML = "查無此人紀錄: " + name;
+          document.getElementById('result').innerHTML = "查無紀錄: " + name;
           return;
         }
         
-        let html = "<table border='1'><tr><th>時間</th><th>動作</th></tr>";
+        let html = "<table><tr><th>時間</th><th>動作</th><th>工時</th></tr>";
         data.forEach(r => {
-          html += `<tr><td>${r.time}</td><td>${r.action}</td></tr>`;
+          html += `<tr><td>${r.time}</td><td>${r.action}</td><td>${r.hours}</td></tr>`;
         });
         document.getElementById('result').innerHTML = html + "</table>";
       } catch (err) {
-        document.getElementById('result').innerHTML = "連線失敗: " + err;
+        document.getElementById('result').innerHTML = "連線失敗";
       }
     }
     
