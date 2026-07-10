@@ -2,63 +2,72 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的打卡紀錄</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    /* 基礎設定：手機友善字體與顏色 */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f7f7f7; margin: 0; padding: 20px; }
+    
+    /* 容器：做成像卡片的樣子 */
+    .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    
+    h3 { text-align: center; color: #333; margin-bottom: 20px; }
+
+    /* 表格優化 */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background-color: #00b900; color: white; padding: 12px; font-size: 14px; }
+    td { border-bottom: 1px solid #eee; padding: 12px 8px; font-size: 14px; color: #555; text-align: center; }
+    
+    /* 斑馬紋效果，方便閱讀 */
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    
+    /* 載入中與錯誤訊息 */
+    #result { text-align: center; color: #666; margin-top: 20px; }
+  </style>
 </head>
 <body>
-  <h3>個人打卡紀錄</h3>
-  <div id="result">載入中...</div>
+
+  <div class="container">
+    <h3>個人打卡紀錄</h3>
+    <div id="result">載入中...</div>
+  </div>
 
   <script>
     const LIFF_ID = "2010498585-GYrE99ub"; 
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
 
     async function initLiff() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-        } else {
-          const profile = await liff.getProfile();
-          const userName = profile.displayName; 
-          
-          // Debug: 跳出視窗，確認名字是否抓到
-          alert("準備傳送的名字是: " + userName);
-          
-          if (!userName) {
-            document.getElementById('result').innerHTML = "錯誤：抓不到 LINE 名稱 (請確認 LIFF 權限)";
-          } else {
-            fetchData(userName);
-          }
-        }
-      } catch (err) {
-        document.getElementById('result').innerHTML = "LIFF 初始化失敗: " + err;
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+      } else {
+        const profile = await liff.getProfile();
+        fetchData(profile.displayName);
       }
     }
 
     async function fetchData(name) {
-      // 這裡直接在網頁顯示發送的 URL，方便檢查
-      const url = `${GAS_URL}?name=${encodeURIComponent(name)}`;
-      console.log("正在請求: " + url);
-      
       try {
-        const response = await fetch(url);
+        const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`);
         const data = await response.json();
         
-        if (data.error) {
-           document.getElementById('result').innerHTML = "後端錯誤: " + data.error;
-           return;
+        if (data.length === 0) {
+          document.getElementById('result').innerHTML = "目前沒有打卡紀錄。";
+          return;
         }
         
-        let html = "<table border='1'><tr><th>時間</th><th>動作</th><th>工時</th></tr>";
+        let html = "<table><tr><th>時間</th><th>動作</th><th>工時</th></tr>";
         data.forEach(r => {
-          html += `<tr><td>${r.time}</td><td>${r.action}</td><td>${r.hours}</td></tr>`;
+          // 把時間轉成精簡格式 (去掉秒數)
+          let simpleTime = r.time.replace("2026-", "").replace(".000Z", "").replace("T", " ");
+          html += `<tr><td>${simpleTime}</td><td>${r.action}</td><td>${r.hours}</td></tr>`;
         });
         document.getElementById('result').innerHTML = html + "</table>";
       } catch (err) {
-        document.getElementById('result').innerHTML = "連線失敗: " + err;
+        document.getElementById('result').innerHTML = "資料讀取失敗，請重新整理。";
       }
     }
-    
     initLiff();
   </script>
 </body>
