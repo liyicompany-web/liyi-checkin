@@ -1,23 +1,44 @@
-<!-- 引入 LIFF SDK -->
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script>
-  async function initLiff() {
-    await liff.init({ liffId: "2010498585-GYrE99ub" });
-    if (liff.isLoggedIn()) {
-      const profile = await liff.getProfile();
-      const userId = profile.userId; // 這裡抓到了 LINE ID
-      fetchData(userId);
-    } else {
-      liff.login();
-    }
-  }
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <title>打卡紀錄查詢</title>
+</head>
+<body>
+  <h3>個人打卡紀錄查詢</h3>
+  <div id="result">讀取中，請稍候...</div>
 
-  async function fetchData(userId) {
+  <script>
+    const LIFF_ID = "2010498585-GYrE99ub";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
-    const res = await fetch(GAS_URL + "?lineId=" + userId);
-    const data = await res.json();
-    // 將 data 顯示在畫面上...
-  }
-  
-  initLiff();
-</script>
+
+    async function initLiff() {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+      } else {
+        const profile = await liff.getProfile();
+        fetchData(profile.userId);
+      }
+    }
+
+    async function fetchData(userId) {
+      try {
+        const response = await fetch(`${GAS_URL}?lineId=${userId}`);
+        const data = await response.json();
+        
+        let html = "<table border='1'><tr><th>時間</th><th>動作</th><th>工時</th></tr>";
+        data.forEach(r => {
+          html += `<tr><td>${r.time}</td><td>${r.action}</td><td>${r.hours}</td></tr>`;
+        });
+        document.getElementById('result').innerHTML = html + "</table>";
+      } catch (err) {
+        document.getElementById('result').innerHTML = "查詢失敗，請確認該 LINE ID 是否已建立資料。";
+      }
+    }
+    initLiff();
+  </script>
+</body>
+</html>
