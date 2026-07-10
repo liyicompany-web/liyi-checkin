@@ -3,52 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>個人打卡紀錄</title>
+  <title>打卡查詢</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
     th { background: #f4f4f4; }
   </style>
 </head>
 <body>
   <h3>個人打卡紀錄</h3>
-  <div id="result">讀取中...</div>
+  <div id="result">載入中...</div>
 
   <script>
     const LIFF_ID = "2010498585-GYrE99ub"; 
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
 
     async function initLiff() {
-      await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) {
-        liff.login();
-      } else {
-        const profile = await liff.getProfile();
-        // --- 關鍵除錯：跳出視窗顯示 ID ---
-        alert("抓到的 ID: " + profile.userId);
-        fetchData(profile.userId);
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          const profile = await liff.getProfile();
+          // 抓取您的 LINE 顯示名稱
+          fetchData(profile.displayName);
+        }
+      } catch (err) {
+        document.getElementById('result').innerHTML = "LIFF 初始化錯誤: " + err;
       }
     }
 
-    async function fetchData(userId) {
+    async function fetchData(name) {
       try {
-        const response = await fetch(`${GAS_URL}?lineId=${userId}`);
+        // 發送 GET 請求
+        const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`);
         const data = await response.json();
         
         if (data.length === 0) {
-          document.getElementById('result').innerHTML = "查無紀錄 (ID: " + userId + ")";
+          document.getElementById('result').innerHTML = "查無此人紀錄: " + name;
           return;
         }
         
         let html = "<table><tr><th>時間</th><th>動作</th></tr>";
         data.forEach(r => {
-          html += `<tr><td>${r.time.replace('T', ' ').substring(0,19)}</td><td>${r.action}</td></tr>`;
+          // 簡單處理日期格式
+          let dateStr = new Date(r.time).toLocaleString();
+          html += `<tr><td>${dateStr}</td><td>${r.action}</td></tr>`;
         });
         document.getElementById('result').innerHTML = html + "</table>";
       } catch (err) {
-        document.getElementById('result').innerHTML = "連線失敗: " + err;
+        document.getElementById('result').innerHTML = "無法讀取資料，請稍後再試。";
       }
     }
     initLiff();
