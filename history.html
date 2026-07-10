@@ -1,19 +1,23 @@
-<!-- 在你的 index.html 中，原先放置 iframe 的位置 -->
-<div id="check-area">
-  <h3 id="status">正在載入紀錄...</h3>
-  <!-- 給 iframe 一個名稱，避免快取衝突 -->
-  <iframe id="resultFrame" name="resultFrame" style="width: 100%; border: none; min-height: 400px;"></iframe>
-</div>
-
+<!-- 引入 LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec"; // 請確認這是你的最新部署網址
+  async function initLiff() {
+    await liff.init({ liffId: "2010498585-GYrE99ub" });
+    if (liff.isLoggedIn()) {
+      const profile = await liff.getProfile();
+      const userId = profile.userId; // 這裡抓到了 LINE ID
+      fetchData(userId);
+    } else {
+      liff.login();
+    }
+  }
 
-  liff.init({ liffId: "2010498585-GYrE99ub" }).then(() => {
-    liff.getProfile().then(p => {
-      document.getElementById('status').innerText = "歡迎 " + p.displayName;
-      // 關鍵：明確指定 src，並強制加上隨機參數避免瀏覽器讀到舊的錯誤快取
-      var finalUrl = GAS_URL + "?name=" + encodeURIComponent(p.displayName) + "&t=" + new Date().getTime();
-      document.getElementById('resultFrame').src = finalUrl;
-    });
-  });
+  async function fetchData(userId) {
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
+    const res = await fetch(GAS_URL + "?lineId=" + userId);
+    const data = await res.json();
+    // 將 data 顯示在畫面上...
+  }
+  
+  initLiff();
 </script>
