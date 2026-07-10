@@ -2,15 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>打卡查詢</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
-    th { background: #f4f4f4; }
-  </style>
 </head>
 <body>
   <h3>個人打卡紀錄</h3>
@@ -18,43 +11,47 @@
 
   <script>
     const LIFF_ID = "2010498585-GYrE99ub"; 
+    // 確保這裡的網址是正確的 (結尾要有 /exec)
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzMy6TBbqqi-hVcVSKq7vB2u4493XxmN7UJsHVLLBarnzI0YnnMBB4IAEEjjxGQqtyb/exec";
 
     async function initLiff() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-        } else {
-          const profile = await liff.getProfile();
-          // 抓取您的 LINE 顯示名稱
-          fetchData(profile.displayName);
-        }
-      } catch (err) {
-        document.getElementById('result').innerHTML = "LIFF 初始化錯誤: " + err;
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+      } else {
+        const profile = await liff.getProfile();
+        // 這裡會跳出視窗告訴您抓到的名字，請確認是否為空
+        alert("目前抓到的名字: " + profile.displayName);
+        fetchData(profile.displayName);
       }
     }
 
     async function fetchData(name) {
+      if (!name) {
+        document.getElementById('result').innerHTML = "錯誤：抓不到 LINE 名稱";
+        return;
+      }
       try {
-        // 發送 GET 請求
-        const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`);
+        const response = await fetch(GAS_URL + "?name=" + encodeURIComponent(name));
         const data = await response.json();
         
+        if (data.error) {
+           document.getElementById('result').innerHTML = "後端錯誤: " + data.error;
+           return;
+        }
+
         if (data.length === 0) {
-          document.getElementById('result').innerHTML = "查無此人紀錄: " + name;
+          document.getElementById('result').innerHTML = "查無紀錄: " + name;
           return;
         }
         
-        let html = "<table><tr><th>時間</th><th>動作</th></tr>";
+        let html = "<table border='1'><tr><th>時間</th><th>動作</th></tr>";
         data.forEach(r => {
-          // 簡單處理日期格式
-          let dateStr = new Date(r.time).toLocaleString();
-          html += `<tr><td>${dateStr}</td><td>${r.action}</td></tr>`;
+          html += `<tr><td>${r.time}</td><td>${r.action}</td></tr>`;
         });
         document.getElementById('result').innerHTML = html + "</table>";
       } catch (err) {
-        document.getElementById('result').innerHTML = "無法讀取資料，請稍後再試。";
+        document.getElementById('result').innerHTML = "連線失敗: " + err;
       }
     }
     initLiff();
