@@ -12,7 +12,16 @@
     /* 容器：做成像卡片的樣子 */
     .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     
-    h3 { text-align: center; color: #333; margin-bottom: 20px; }
+    h3 { text-align: center; color: #333; margin-bottom: 5px; }
+
+    /* 但書文字樣式 */
+    .disclaimer { 
+      font-size: 13px; 
+      color: #777; 
+      text-align: center; 
+      margin-bottom: 20px; 
+      font-style: italic; 
+    }
 
     /* 表格優化 */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -30,6 +39,7 @@
 
   <div class="container">
     <h3>個人打卡紀錄</h3>
+    <p class="disclaimer">※ 顯示的打卡時數未扣除休息時間，實際時數以月底結算為主。</p>
     <div id="result">載入中...</div>
   </div>
 
