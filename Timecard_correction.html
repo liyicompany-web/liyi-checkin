@@ -41,18 +41,34 @@
   <p id="status-text" style="color: #666; margin-top: 20px; text-align: center;"></p>
 
   <script>
-    // 這裡請填入您為這個表單新申請的 LIFF ID
+    // ▼▼▼ 1. 這裡請填入您在 LINE Developers 申請到的 LIFF ID (務必保留雙引號) ▼▼▼
     const MY_LIFF_ID = "2010498585-79hWXBD9"; 
+    
+    // ▼▼▼ 2. 這是您剛剛找回來的 GAS 後端網址 ▼▼▼
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbygHNPtauU-l3f1JTFi9vucwliq--Y91kVkJwSawz41ERn9g1YN_LzRlRAriCjvWzWgOA/exec"; 
+    
     let userName = "";
 
-    liff.init({ liffId: MY_LIFF_ID }).then(() => {
-      liff.getProfile().then(p => {
-        userName = p.displayName;
-        document.getElementById('welcome-msg').innerText = userName + " 的修正申請單";
-        document.getElementById('form-container').style.display = "block";
+    // 多加一層 Try Catch，防止任何語法錯誤導致畫面卡住
+    try {
+      liff.init({ liffId: MY_LIFF_ID }).then(() => {
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        liff.getProfile().then(p => {
+          userName = p.displayName;
+          document.getElementById('welcome-msg').innerText = userName + " 的修正申請單";
+          document.getElementById('form-container').style.display = "block";
+        }).catch(err => {
+          document.getElementById('welcome-msg').innerText = "讀取資料失敗：" + err.message;
+        });
+      }).catch(err => {
+        document.getElementById('welcome-msg').innerText = "LIFF連線失敗：" + err.message;
       });
-    });
+    } catch (error) {
+      document.getElementById('welcome-msg').innerText = "程式錯誤：" + error.message;
+    }
 
     function submitCorrection() {
       let action = document.getElementById('actionType').value;
@@ -67,7 +83,6 @@
 
       document.getElementById('status-text').innerText = "資料傳送中...";
       
-      // 注意：這裡多帶了一個 type=correction 讓後端辨識
       let finalUrl = `${GAS_API_URL}?type=correction&name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&reqDate=${date}&reqTime=${time}&reason=${encodeURIComponent(reason)}`;
       
       fetch(finalUrl).then(r => r.json()).then(data => {
