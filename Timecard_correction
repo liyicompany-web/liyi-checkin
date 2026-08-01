@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打卡修正申請</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { padding: 20px; font-family: sans-serif; }
+    .form-group { margin-bottom: 15px; text-align: left; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 16px;}
+    button { width: 100%; font-size: 18px; padding: 15px; background-color: #FF9800; color: white; border: none; border-radius: 8px; margin-top: 10px;}
+  </style>
+</head>
+<body>
+  <h2 id="welcome-msg" style="text-align: center;">載入中...</h2>
+  
+  <div id="form-container" style="display:none;">
+    <div class="form-group">
+      <label>補登動作</label>
+      <select id="actionType">
+        <option value="上班">上班</option>
+        <option value="下班">下班</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>實際打卡日期</label>
+      <input type="date" id="reqDate" required>
+    </div>
+    <div class="form-group">
+      <label>實際打卡時間</label>
+      <input type="time" id="reqTime" required>
+    </div>
+    <div class="form-group">
+      <label>異常原因</label>
+      <input type="text" id="reason" placeholder="例如：GPS定位一直失敗" required>
+    </div>
+    <button onclick="submitCorrection()">送出修正申請</button>
+  </div>
+  <p id="status-text" style="color: #666; margin-top: 20px; text-align: center;"></p>
+
+  <script>
+    // 這裡請填入您為這個表單新申請的 LIFF ID
+    const MY_LIFF_ID = "請填入新的_LIFF_ID"; 
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbygHNPtauU-l3f1JTFi9vucwliq--Y91kVkJwSawz41ERn9g1YN_LzRlRAriCjvWzWgOA/exec"; 
+    let userName = "";
+
+    liff.init({ liffId: MY_LIFF_ID }).then(() => {
+      liff.getProfile().then(p => {
+        userName = p.displayName;
+        document.getElementById('welcome-msg').innerText = userName + " 的修正申請單";
+        document.getElementById('form-container').style.display = "block";
+      });
+    });
+
+    function submitCorrection() {
+      let action = document.getElementById('actionType').value;
+      let date = document.getElementById('reqDate').value;
+      let time = document.getElementById('reqTime').value;
+      let reason = document.getElementById('reason').value;
+
+      if (!date || !time || !reason) {
+        alert("請完整填寫日期、時間與原因！");
+        return;
+      }
+
+      document.getElementById('status-text').innerText = "資料傳送中...";
+      
+      // 注意：這裡多帶了一個 type=correction 讓後端辨識
+      let finalUrl = `${GAS_API_URL}?type=correction&name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&reqDate=${date}&reqTime=${time}&reason=${encodeURIComponent(reason)}`;
+      
+      fetch(finalUrl).then(r => r.json()).then(data => {
+        document.getElementById('status-text').innerText = data.message;
+        if(data.status === "success") {
+          alert("申請成功！請等候主管審核。");
+          liff.closeWindow();
+        }
+      }).catch(err => {
+        document.getElementById('status-text').innerText = "傳送失敗，請重試。";
+      });
+    }
+  </script>
+</body>
+</html>
