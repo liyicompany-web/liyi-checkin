@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>打卡修正申請</title>
+  <title>各項申請單</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { padding: 20px; font-family: sans-serif; }
@@ -18,38 +18,60 @@
   
   <div id="form-container" style="display:none;">
     <div class="form-group">
-      <label>補登動作</label>
-      <select id="actionType">
-        <option value="上班">上班</option>
-        <option value="下班">下班</option>
+      <label>申請類型</label>
+      <select id="requestType" onchange="toggleForm()">
+        <option value="correction">打卡修正申請</option>
+        <option value="leave">特休申請</option>
       </select>
     </div>
-    <div class="form-group">
-      <label>實際打卡日期</label>
-      <input type="date" id="reqDate" required>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+    <!-- 區塊一：打卡修正申請的欄位 -->
+    <div id="correction-fields">
+      <div class="form-group">
+        <label>補登動作</label>
+        <select id="actionType">
+          <option value="上班">上班</option>
+          <option value="下班">下班</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>實際打卡日期</label>
+        <input type="date" id="reqDate">
+      </div>
+      <div class="form-group">
+        <label>實際打卡時間</label>
+        <input type="time" id="reqTime">
+      </div>
+      <div class="form-group">
+        <label>異常原因</label>
+        <input type="text" id="reason" placeholder="例如：GPS定位一直失敗">
+      </div>
     </div>
-    <div class="form-group">
-      <label>實際打卡時間</label>
-      <input type="time" id="reqTime" required>
+
+    <!-- 區塊二：特休申請的欄位 (已移除事由) -->
+    <div id="leave-fields" style="display: none;">
+      <div class="form-group">
+        <label>申請日期</label>
+        <input type="date" id="leaveDate">
+      </div>
+      <div class="form-group">
+        <label>申請時數 (小時)</label>
+        <input type="number" id="leaveHours" placeholder="例如：8" min="1" step="0.5">
+      </div>
     </div>
-    <div class="form-group">
-      <label>異常原因</label>
-      <input type="text" id="reason" placeholder="例如：GPS定位一直失敗" required>
-    </div>
-    <button onclick="submitCorrection()">送出修正申請</button>
+
+    <button onclick="submitForm()">送出申請</button>
   </div>
   <p id="status-text" style="color: #666; margin-top: 20px; text-align: center;"></p>
 
   <script>
-    // ▼▼▼ 1. 這裡請填入您在 LINE Developers 申請到的 LIFF ID (務必保留雙引號) ▼▼▼
     const MY_LIFF_ID = "2010498585-79hWXBD9"; 
-    
-    // ▼▼▼ 2. 這是您剛剛找回來的 GAS 後端網址 ▼▼▼
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbygHNPtauU-l3f1JTFi9vucwliq--Y91kVkJwSawz41ERn9g1YN_LzRlRAriCjvWzWgOA/exec"; 
     
     let userName = "";
 
-    // 多加一層 Try Catch，防止任何語法錯誤導致畫面卡住
     try {
       liff.init({ liffId: MY_LIFF_ID }).then(() => {
         if (!liff.isLoggedIn()) {
@@ -58,7 +80,7 @@
         }
         liff.getProfile().then(p => {
           userName = p.displayName;
-          document.getElementById('welcome-msg').innerText = userName + " 的修正申請單";
+          document.getElementById('welcome-msg').innerText = userName + " 的申請單";
           document.getElementById('form-container').style.display = "block";
         }).catch(err => {
           document.getElementById('welcome-msg').innerText = "讀取資料失敗：" + err.message;
@@ -70,20 +92,46 @@
       document.getElementById('welcome-msg').innerText = "程式錯誤：" + error.message;
     }
 
-    function submitCorrection() {
-      let action = document.getElementById('actionType').value;
-      let date = document.getElementById('reqDate').value;
-      let time = document.getElementById('reqTime').value;
-      let reason = document.getElementById('reason').value;
+    function toggleForm() {
+      let type = document.getElementById('requestType').value;
+      if (type === "correction") {
+        document.getElementById('correction-fields').style.display = "block";
+        document.getElementById('leave-fields').style.display = "none";
+      } else if (type === "leave") {
+        document.getElementById('correction-fields').style.display = "none";
+        document.getElementById('leave-fields').style.display = "block";
+      }
+    }
 
-      if (!date || !time || !reason) {
-        alert("請完整填寫日期、時間與原因！");
-        return;
+    function submitForm() {
+      let type = document.getElementById('requestType').value;
+      let finalUrl = "";
+
+      if (type === "correction") {
+        let action = document.getElementById('actionType').value;
+        let date = document.getElementById('reqDate').value;
+        let time = document.getElementById('reqTime').value;
+        let reason = document.getElementById('reason').value;
+
+        if (!date || !time || !reason) {
+          alert("請完整填寫補登日期、時間與異常原因！");
+          return;
+        }
+        finalUrl = `${GAS_API_URL}?type=correction&name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&reqDate=${date}&reqTime=${time}&reason=${encodeURIComponent(reason)}`;
+      
+      } else if (type === "leave") {
+        let leaveDate = document.getElementById('leaveDate').value;
+        let leaveHours = document.getElementById('leaveHours').value;
+
+        if (!leaveDate || !leaveHours) {
+          alert("請填寫特休申請日期與時數！");
+          return;
+        }
+        // 特休的網址參數已移除 leaveReason
+        finalUrl = `${GAS_API_URL}?type=leave&name=${encodeURIComponent(userName)}&leaveDate=${leaveDate}&leaveHours=${leaveHours}`;
       }
 
       document.getElementById('status-text').innerText = "資料傳送中...";
-      
-      let finalUrl = `${GAS_API_URL}?type=correction&name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&reqDate=${date}&reqTime=${time}&reason=${encodeURIComponent(reason)}`;
       
       fetch(finalUrl).then(r => r.json()).then(data => {
         document.getElementById('status-text').innerText = data.message;
