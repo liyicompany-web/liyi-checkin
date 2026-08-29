@@ -17,7 +17,6 @@
   <h2 id="welcome-msg" style="text-align: center;">載入中...</h2>
   
   <div id="form-container" style="display:none;">
-    <!-- 新增：選擇申請類型 -->
     <div class="form-group">
       <label>申請類型</label>
       <select id="requestType" onchange="toggleForm()">
@@ -51,7 +50,7 @@
       </div>
     </div>
 
-    <!-- 區塊二：特休申請的欄位 (預設隱藏) -->
+    <!-- 區塊二：特休申請的欄位 (已移除事由) -->
     <div id="leave-fields" style="display: none;">
       <div class="form-group">
         <label>申請日期</label>
@@ -60,10 +59,6 @@
       <div class="form-group">
         <label>申請時數 (小時)</label>
         <input type="number" id="leaveHours" placeholder="例如：8" min="1" step="0.5">
-      </div>
-      <div class="form-group">
-        <label>備註/事由 (選填)</label>
-        <input type="text" id="leaveReason" placeholder="例如：家庭旅遊">
       </div>
     </div>
 
@@ -97,7 +92,6 @@
       document.getElementById('welcome-msg').innerText = "程式錯誤：" + error.message;
     }
 
-    // 負責切換顯示的表單欄位
     function toggleForm() {
       let type = document.getElementById('requestType').value;
       if (type === "correction") {
@@ -109,7 +103,6 @@
       }
     }
 
-    // 統整送出邏輯
     function submitForm() {
       let type = document.getElementById('requestType').value;
       let finalUrl = "";
@@ -129,13 +122,13 @@
       } else if (type === "leave") {
         let leaveDate = document.getElementById('leaveDate').value;
         let leaveHours = document.getElementById('leaveHours').value;
-        let leaveReason = document.getElementById('leaveReason').value;
 
         if (!leaveDate || !leaveHours) {
           alert("請填寫特休申請日期與時數！");
           return;
         }
-        finalUrl = `${GAS_API_URL}?type=leave&name=${encodeURIComponent(userName)}&leaveDate=${leaveDate}&leaveHours=${leaveHours}&leaveReason=${encodeURIComponent(leaveReason)}`;
+        // 特休的網址參數已移除 leaveReason
+        finalUrl = `${GAS_API_URL}?type=leave&name=${encodeURIComponent(userName)}&leaveDate=${leaveDate}&leaveHours=${leaveHours}`;
       }
 
       document.getElementById('status-text').innerText = "資料傳送中...";
