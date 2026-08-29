@@ -1,94 +1,111 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>門店打卡系統</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-</head>
-<body style="padding: 20px; font-family: sans-serif; text-align: center;">
-  <h2 id="welcome-msg">載入中...</h2>
-  
-  <div id="controls" style="display:none;">
-    <!-- 新增：特殊事項備註輸入框 -->
-    <input type="text" id="remark-input" placeholder="特殊事項備註 (選填)" style="width: 80%; max-width: 300px; padding: 12px; font-size: 16px; margin: 10px auto 20px auto; display: block; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+function doGet(e) {
+  var output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+
+  try {
+    var ss = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1VcZ1G1r6chHgn9hsX0OXZNGWUw4rfuuKdOXNd98SPZk/edit");
     
-    <button onclick="handlePunch('上班')" style="font-size: 20px; padding: 15px 40px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px;">上班打卡</button><br>
-    <button onclick="handlePunch('下班')" style="font-size: 20px; padding: 15px 40px; margin: 10px; background-color: #f44336; color: white; border: none; border-radius: 8px;">下班打卡</button>
-  </div>
-  
-  <p id="status-text" style="color: #666; margin-top: 20px;"></p>
-
-  <script>
-    const MY_LIFF_ID = "2010498585-88IzHp5i";
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbygHNPtauU-l3f1JTFi9vucwliq--Y91kVkJwSawz41ERn9g1YN_LzRlRAriCjvWzWgOA/exec"; 
-
-    const stores = [
-      {name: "關西工廠", lat: 24.793893, lng: 121.189016},
-      {name: "大昌店", lat: 24.864896, lng: 121.222429},
-      {name: "桃園店", lat: 24.997061, lng: 121.306191},
-      {name: "桃園店2", lat: 24.996994, lng: 121.306111},
-      {name: "中壢店", lat: 24.956311, lng: 121.223243},
-      {name: "中正店", lat: 24.869521, lng: 121.214179},
-      {name: "中豐店", lat: 24.869784, lng: 121.213933},
-      {name: "龍福店", lat: 24.864944, lng: 121.222889},
-      {name: "大溪店", lat: 24.897099, lng: 121.278800}
-    ];
-
-    let userName = "";
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    async function handlePunch(action) {
-      document.getElementById('status-text').innerText = "定位與檢查中...";
+    // ==========================================
+    // 功能一：處理「打卡修正申請」 (保持不變)
+    // ==========================================
+    if (e.parameter.type === "correction") {
+      var correctionSheet = ss.getSheetByName("打卡修正申請");
+      if (!correctionSheet) {
+        return output.setContent(JSON.stringify({ "status": "error", "message": "找不到「打卡修正申請」分頁，請聯絡管理員建立。" }));
+      }
       
-      navigator.geolocation.getCurrentPosition(pos => {
-        let lat = pos.coords.latitude;
-        let lng = pos.coords.longitude;
-        
-        let minDistance = Math.min(...stores.map(s => getDistance(lat, lng, s.lat, s.lng)));
-        
-        if (minDistance > 100) {
-          alert("打卡失敗：您距離最近門市約 " + Math.round(minDistance) + " 公尺，超過 100 公尺限制。");
-          document.getElementById('status-text').innerText = "不在門市範圍內";
-          return;
-        }
-
-        // 新增：取得備註欄位的內容，如果沒填就是空字串
-        let remark = document.getElementById('remark-input').value.trim();
-
-        document.getElementById('status-text').innerText = "驗證通過，傳送中...";
-        
-        // 修改：在網址後方加上 &remark 參數
-        let finalUrl = `${GAS_API_URL}?name=${encodeURIComponent(userName)}&action=${encodeURIComponent(action)}&lat=${lat}&lng=${lng}&remark=${encodeURIComponent(remark)}`;
-        
-        fetch(finalUrl).then(r => r.json()).then(data => {
-          document.getElementById('status-text').innerText = data.message;
-          if(data.status === "success") {
-            alert("打卡成功！");
-            document.getElementById('remark-input').value = ""; // 打卡成功後清空備註欄
-            liff.closeWindow();
-          }
-        });
-      }, err => {
-        alert("定位錯誤 (代碼 " + err.code + ")，請確認 GPS 已開啟。");
-        document.getElementById('status-text').innerText = "定位失敗";
-      }, { enableHighAccuracy: true, timeout: 8000 });
+      var now = new Date();
+      var lineName = e.parameter.name || "未知員工";
+      var actionType = e.parameter.action;
+      var reqDate = e.parameter.reqDate; 
+      var reqTime = e.parameter.reqTime; 
+      var reason = e.parameter.reason;   
+      
+      correctionSheet.appendRow([now, lineName, actionType, reqDate, reqTime, reason, "待審核"]);
+      return output.setContent(JSON.stringify({ "status": "success", "message": "修正申請已送出，請等候主管審核！" }));
     }
 
-    liff.init({ liffId: MY_LIFF_ID }).then(() => {
-      liff.getProfile().then(p => {
-        userName = p.displayName;
-        document.getElementById('welcome-msg').innerText = userName + " 您好";
-        document.getElementById('controls').style.display = "block";
-      });
-    });
-  </script>
-</body>
-</html>
+    // ==========================================
+    // 功能二：處理「特休申請」 (5欄位，無事由) (保持不變)
+    // ==========================================
+    if (e.parameter.type === "leave") {
+      var leaveSheet = ss.getSheetByName("特休申請"); 
+      if (!leaveSheet) {
+        return output.setContent(JSON.stringify({ "status": "error", "message": "找不到「特休申請」分頁，請聯絡管理員建立。" }));
+      }
+      var now = new Date();
+      var lineName = e.parameter.name || "未知員工";
+      
+      // 依序寫入 A 到 E 欄
+      leaveSheet.appendRow([
+        now,                    // A欄：申請時間
+        lineName,               // B欄：員工姓名
+        e.parameter.leaveDate,  // C欄：特休日期
+        e.parameter.leaveHours, // D欄：申請時數
+        "待審核"                 // E欄：審核狀態
+      ]);
+      return output.setContent(JSON.stringify({ "status": "success", "message": "特休申請已送出，請等候主管審核！" }));
+    }
+
+    // ==========================================
+    // 功能三：處理「正常打卡」 (包含【以天計算】防呆機制與特殊事項備註)
+    // ==========================================
+    if (e.parameter.action && !e.parameter.type) {
+      var sheet = ss.getSheets()[0]; // 寫入第一個分頁 (主打卡紀錄)
+      
+      var lineName = e.parameter.name || "未知員工";
+      var actionType = e.parameter.action; // "上班" 或 "下班"
+      var lat = e.parameter.lat;
+      var lng = e.parameter.lng;
+      var remark = e.parameter.remark || ""; // 抓取特殊事項備註
+      
+      var now = new Date();
+      var todayStr = now.toDateString(); // 取得今天的日期字串 (用來判斷是否跨日)
+      var data = sheet.getDataRange().getValues();
+      
+      var lastActionToday = ""; // 只記錄「今天」的最後一次動作
+      var lastRecordTime = null; // 記錄最後一次打卡的時間 (不限日期，用來算3分鐘冷卻)
+      
+      // 1. 找出該員工的「上一筆」打卡紀錄，並判斷是不是今天的紀錄
+      for (var i = data.length - 1; i >= 1; i--) {
+        if (data[i][1] === lineName) {
+          lastRecordTime = new Date(data[i][0]);
+          
+          // 如果這筆紀錄是「今天」的，才把動作記錄下來
+          if (lastRecordTime.toDateString() === todayStr) {
+            lastActionToday = data[i][2];
+          }
+          break; // 找到最近一筆就停止迴圈
+        }
+      }
+
+      // 2. 防呆機制：檢查「今天」是否連續打相同的動作
+      if (lastActionToday === actionType) {
+        var errorMsg = (actionType === "上班") ? "您今日已經打過「上班」了，請先進行「下班」打卡！" : "您今日已經打過「下班」了，請勿重複打卡！";
+        return output.setContent(JSON.stringify({ "status": "error", "message": errorMsg }));
+      }
+
+      // 3. 防呆機制：如果是今天第一次打卡，卻直接按「下班」
+      if (lastActionToday === "" && actionType === "下班") {
+        return output.setContent(JSON.stringify({ "status": "error", "message": "查無您【今日】的上班紀錄，無法直接進行下班打卡。" }));
+      }
+
+      // 4. 防呆機制：3 分鐘內無法重複打卡 (維持原本邏輯)
+      if (lastRecordTime) {
+        var diffInSeconds = (now - lastRecordTime) / 1000;
+        if (diffInSeconds < 180) {
+          return output.setContent(JSON.stringify({ "status": "error", "message": lineName + "已打卡，三分鐘內無法重複打卡" }));
+        }
+      }
+      
+      // 5. 通過所有檢查，寫入正常打卡資料 (第六欄放入備註)
+      sheet.appendRow([now, lineName, actionType, lat, lng, remark]);
+      
+      return output.setContent(JSON.stringify({ "status": "success", "message": "【" + actionType + "】打卡成功！" }));
+    }
+    
+    return output.setContent(JSON.stringify({ "status": "ready", "message": "打卡系統後端正常運作中" }));
+  } catch (error) {
+    return output.setContent(JSON.stringify({ "status": "error", "message": error.message }));
+  }
+}
